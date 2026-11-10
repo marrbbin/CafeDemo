@@ -9,7 +9,7 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ business, onOpenBooking, onOpenSchema }) => {
-  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`;
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}&travelmode=driving&dir_action=navigate`;
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });

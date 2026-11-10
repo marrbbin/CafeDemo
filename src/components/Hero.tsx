@@ -23,9 +23,9 @@ export const Hero: React.FC<HeroProps> = ({ business, onExploreClick, onBookClic
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10">
         
-        {/* Subtle pill tag with Cadiz City location */}
+        {/* Subtle pill tag with Portside Cadiz City location */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#7A4B3A]/8 text-[#7A4B3A] text-xs font-medium tracking-widest uppercase mb-6">
-          <span>Cadiz City Specialty Roastery &bull; Philippines</span>
+          <span>Portside Cadiz City &bull; Specialty Roastery &bull; Philippines</span>
         </div>
 
         {/* Hero Title (Strictly matching reference styling: "Enjoy Your Coffee with SandBox Cafe") */}

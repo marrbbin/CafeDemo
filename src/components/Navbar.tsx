@@ -19,9 +19,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Directions deep link according to critical requirement:
-  // https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}
-  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`;
+  // Directions deep link configured to highlight the driving road automatically
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}&travelmode=driving&dir_action=navigate`;
 
   const navLinks = [
     { id: 'products', label: 'Products' },

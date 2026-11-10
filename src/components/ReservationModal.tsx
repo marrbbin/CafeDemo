@@ -38,6 +38,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedData, setSubmittedData] = useState<Reservation | null>(null);
+  const [submissionSource, setSubmissionSource] = useState<'supabase' | 'fallback'>('fallback');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -83,6 +84,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
 
       if (result.success && result.data) {
         setSubmittedData(result.data);
+        setSubmissionSource(result.source);
         if (onSuccess) onSuccess(result.data);
       } else {
         setErrorMessage(result.error || 'Failed to submit reservation. Please try again.');
@@ -334,11 +336,24 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                 <span className="text-stone-500">Party Size:</span>
                 <span className="font-medium text-[#231F20]">{submittedData.party_size || partySize} Guests</span>
               </div>
-              <div className="flex justify-between py-1">
+              <div className="flex justify-between py-1 border-b border-black/5">
                 <span className="text-stone-500">Status:</span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-100 text-amber-800 uppercase tracking-wider">
                   {submittedData.status || 'Pending'}
                 </span>
+              </div>
+              <div className="flex justify-between py-1 items-center">
+                <span className="text-stone-500">Database Sync:</span>
+                {submissionSource === 'supabase' ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <span>Saved in Supabase</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-mono text-stone-600 bg-stone-100 px-2 py-0.5 rounded-md">
+                    <span>Local Record</span>
+                  </span>
+                )}
               </div>
             </div>
 

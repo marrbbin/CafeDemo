@@ -21,24 +21,32 @@ interface SqlSchemaModalProps {
 }
 
 const SEED_ONLY_SQL = `-- ==============================================================================
--- RUN THIS IN SUPABASE SQL EDITOR TO INSERT SANDBOX CAFE INTO YOUR TABLES
+-- SANDBOX CAFE (CADIZ CITY) - 100% VALID HEX UUID SEED SCRIPT
+-- RUN THIS IN SUPABASE SQL EDITOR TO POPULATE ALL 4 TABLES WITH ZERO ERRORS
 -- ==============================================================================
 
--- 1. Insert SandBox Cafe Business
+-- 1. Ensure optional columns exist on your tables
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS tagline TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS hero_title TEXT;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS party_size INT DEFAULT 2;
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS special_notes TEXT;
+
+-- 2. Insert SandBox Cafe Business (Valid Hex UUID: b2222222...)
 INSERT INTO businesses (id, slug, name, latitude, longitude, tagline, hero_title)
 VALUES (
     'b2222222-2222-4222-8222-222222222222',
     'sandbox-cafe',
     'SandBox Cafe',
-    10.833333,
-    125.150000,
-    'Discover tranquility at SandBox Cafe in Cadiz City, a warm sanctuary for unwinding, where your days are perfected with relaxation and rich handcrafted brews.',
+    10.950625,
+    123.322375,
+    'Discover tranquility at SandBox Cafe at Portside, Cadiz City, a warm seaside sanctuary for unwinding, where your days are perfected with ocean breezes and rich handcrafted brews.',
     'Enjoy Your Coffee with SandBox Cafe'
 )
 ON CONFLICT (slug) DO UPDATE 
 SET name = EXCLUDED.name, latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude;
 
--- 2. Insert Categories
+-- 3. Insert Categories (Valid Hex UUIDs: c1111111...)
 INSERT INTO categories (id, business_id, name, display_order)
 VALUES 
     ('c1111111-0000-4000-8000-000000000001', 'b2222222-2222-4222-8222-222222222222', 'Signature Whipped', 1),
@@ -46,11 +54,11 @@ VALUES
     ('c1111111-0000-4000-8000-000000000003', 'b2222222-2222-4222-8222-222222222222', 'Espresso & Latte', 3)
 ON CONFLICT (id) DO NOTHING;
 
--- 3. Insert Menu Items (Prices in Philippine Pesos)
+-- 4. Insert Menu Items in Philippine Pesos (Valid Hex UUIDs: d1111111...)
 INSERT INTO menu_items (id, business_id, category_id, name, price, image_url, description)
 VALUES
     (
-        'm1111111-0000-4000-8000-000000000001',
+        'd1111111-0000-4000-8000-000000000001',
         'b2222222-2222-4222-8222-222222222222',
         'c1111111-0000-4000-8000-000000000001',
         'Dalgona Velvet Crema',
@@ -59,7 +67,7 @@ VALUES
         'Golden whipped coffee crema layered over silky chilled fresh milk with organic muscovado sugar.'
     ),
     (
-        'm1111111-0000-4000-8000-000000000002',
+        'd1111111-0000-4000-8000-000000000002',
         'b2222222-2222-4222-8222-222222222222',
         'c1111111-0000-4000-8000-000000000002',
         'Iced Caramel Macchiato',
@@ -68,7 +76,7 @@ VALUES
         'Fresh milk stained with double espresso shots and buttery artisanal caramel syrup over ice.'
     ),
     (
-        'm1111111-0000-4000-8000-000000000003',
+        'd1111111-0000-4000-8000-000000000003',
         'b2222222-2222-4222-8222-222222222222',
         'c1111111-0000-4000-8000-000000000002',
         'Nitro Cold Brew on Slate',
@@ -77,7 +85,7 @@ VALUES
         'Single-origin slow-steeped 16-hour cold brew served with glass straw on volcanic dark slate.'
     ),
     (
-        'm1111111-0000-4000-8000-000000000004',
+        'd1111111-0000-4000-8000-000000000004',
         'b2222222-2222-4222-8222-222222222222',
         'c1111111-0000-4000-8000-000000000003',
         'Spanish Sun Rosetta Latte',
@@ -86,20 +94,38 @@ VALUES
         'Velvety steamed milk with sweet condensed milk base and hand-poured rosetta leaf art in ceramic.'
     ),
     (
-        'm1111111-0000-4000-8000-000000000005',
+        'd1111111-0000-4000-8000-000000000005',
         'b2222222-2222-4222-8222-222222222222',
         'c1111111-0000-4000-8000-000000000003',
         'Artisan Flat White Saucer',
         165.00,
         'https://images.unsplash.com/photo-1577968897966-3d4325b36b61?auto=format&fit=crop&w=800&q=80',
         'Rich micro-foam delicately folded over double ristretto espresso, served on porcelain saucer.'
+    ),
+    (
+        'd1111111-0000-4000-8000-000000000006',
+        'b2222222-2222-4222-8222-222222222222',
+        'c1111111-0000-4000-8000-000000000003',
+        'SandBox Single-Origin Cortado',
+        160.00,
+        'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=800&q=80',
+        'Equal ratio of double extracted espresso and velvety textured milk in a classic Gibraltar glass.'
+    ),
+    (
+        'd1111111-0000-4000-8000-000000000007',
+        'b2222222-2222-4222-8222-222222222222',
+        'c1111111-0000-4000-8000-000000000001',
+        'Ceremonial Matcha Cloud',
+        210.00,
+        'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=800&q=80',
+        'Stone-ground Uji ceremonial matcha whisked fresh and layered over silky oat milk with wild honey.'
     )
 ON CONFLICT (id) DO NOTHING;
 
--- 4. Insert Sample Reservation
+-- 5. Insert Sample Reservation (Valid Hex UUID: e1111111...)
 INSERT INTO reservations (id, business_id, customer_name, contact_number, reservation_time, status, party_size, special_notes)
 VALUES (
-    'r1111111-0000-4000-8000-000000000001',
+    'e1111111-0000-4000-8000-000000000001',
     'b2222222-2222-4222-8222-222222222222',
     'Maria Santos',
     '+63 917 842 9102',

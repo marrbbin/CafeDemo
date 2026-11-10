@@ -90,6 +90,16 @@ function initializeLocalFallback() {
 
   if (!localStorage.getItem(STORAGE_KEYS.BUSINESSES)) {
     localStorage.setItem(STORAGE_KEYS.BUSINESSES, JSON.stringify(SEED_BUSINESSES));
+  } else {
+    // Sync coordinates if still holding old coordinates
+    try {
+      const existing = JSON.parse(localStorage.getItem(STORAGE_KEYS.BUSINESSES) || '[]');
+      if (existing.length > 0 && (existing[0].longitude === 125.15 || existing[0].latitude === 10.833333)) {
+        localStorage.setItem(STORAGE_KEYS.BUSINESSES, JSON.stringify(SEED_BUSINESSES));
+      }
+    } catch {
+      localStorage.setItem(STORAGE_KEYS.BUSINESSES, JSON.stringify(SEED_BUSINESSES));
+    }
   }
   if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES)) {
     localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(SEED_CATEGORIES));
@@ -243,6 +253,30 @@ export async function insertReservation(reservation: {
 
   if (currentCreds.isConfigured) {
     try {
+      // 1. Ensure business exists in Supabase so foreign key constraint is satisfied
+      const { data: existingBiz } = await supabase
+        .from('businesses')
+        .select('id')
+        .eq('id', payload.business_id)
+        .maybeSingle();
+
+      if (!existingBiz) {
+        const { data: anyBiz } = await supabase
+          .from('businesses')
+          .select('id')
+          .limit(1)
+          .maybeSingle();
+
+        if (anyBiz) {
+          payload.business_id = anyBiz.id;
+        } else {
+          // Insert SandBox Cafe into businesses table first
+          await supabase
+            .from('businesses')
+            .upsert([SEED_BUSINESSES[0] as any], { onConflict: 'slug' });
+        }
+      }
+
       const { data, error } = await supabase
         .from('reservations')
         .insert([payload as any])
