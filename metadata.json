@@ -1,0 +1,6 @@
+{
+  "name": "SandBox Cafe - Digital Menu & Table Booking",
+  "description": "Mobile-first digital menu and table reservation system for SandBox Cafe in Cadiz City, Philippines with Supabase and Google Maps deep linking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
