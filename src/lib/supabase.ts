@@ -1,34 +1,80 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Business, Category, MenuItem, Reservation, Database } from '../types/database';
+import { Business, Category, MenuItem, Reservation } from '../types/database';
 import { SEED_BUSINESSES, SEED_CATEGORIES, SEED_MENU_ITEMS, INITIAL_RESERVATIONS } from './mockData';
 
-// Environment variables for Supabase (supports both VITE_ prefix and standard Vercel integration keys)
-const env = import.meta.env as Record<string, string | undefined>;
-const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL || '';
-const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY || env.SUPABASE_KEY || '';
-
-// Validate whether real credentials have been provided
-export const isSupabaseConfigured = Boolean(
-  supabaseUrl && 
-  supabaseAnonKey && 
-  supabaseUrl !== 'https://your-project.supabase.co' &&
-  !supabaseUrl.includes('placeholder')
-);
-
-// Fallback client for TypeScript satisfaction if unconfigured
-// Supabase client instance
-export const supabase: SupabaseClient = createClient(
-  isSupabaseConfigured ? supabaseUrl : 'https://dummy-instance.supabase.co',
-  isSupabaseConfigured ? supabaseAnonKey : 'dummy-anon-key'
-);
-
-// Local persistence storage keys for offline/fallback mode
+// Storage keys for local fallback and runtime credentials
 const STORAGE_KEYS = {
+  CUSTOM_URL: 'sandbox_custom_supabase_url',
+  CUSTOM_KEY: 'sandbox_custom_supabase_anon_key',
   BUSINESSES: 'sandbox_cafe_businesses_data',
   CATEGORIES: 'sandbox_cafe_categories_data',
   MENU_ITEMS: 'sandbox_cafe_menu_items_data',
   RESERVATIONS: 'sandbox_cafe_reservations_data',
 };
+
+// Retrieve credentials from localStorage first, then from environment
+export function getSupabaseCredentials(): { url: string; key: string; isConfigured: boolean; source: 'env' | 'custom' | 'none' } {
+  if (typeof window !== 'undefined') {
+    const customUrl = localStorage.getItem(STORAGE_KEYS.CUSTOM_URL);
+    const customKey = localStorage.getItem(STORAGE_KEYS.CUSTOM_KEY);
+    if (customUrl && customKey && !customUrl.includes('placeholder')) {
+      return { url: customUrl.trim(), key: customKey.trim(), isConfigured: true, source: 'custom' };
+    }
+  }
+
+  const env = import.meta.env as Record<string, string | undefined>;
+  const url = (env.VITE_SUPABASE_URL || env.SUPABASE_URL || '').trim();
+  const key = (env.VITE_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY || env.SUPABASE_KEY || '').trim();
+
+  const isConfigured = Boolean(
+    url && 
+    key && 
+    url !== 'https://your-project.supabase.co' &&
+    !url.includes('placeholder')
+  );
+
+  return {
+    url,
+    key,
+    isConfigured,
+    source: isConfigured ? 'env' : 'none'
+  };
+}
+
+// Current credentials state
+let creds = getSupabaseCredentials();
+
+// Active Supabase client
+export let supabase: SupabaseClient = createClient(
+  creds.isConfigured ? creds.url : 'https://dummy-instance.supabase.co',
+  creds.isConfigured ? creds.key : 'dummy-anon-key'
+);
+
+export let isSupabaseConfigured = creds.isConfigured;
+
+// Update credentials dynamically from UI modal
+export function setCustomSupabaseCredentials(url: string, key: string) {
+  if (typeof window === 'undefined') return;
+  const cleanUrl = url.trim();
+  const cleanKey = key.trim();
+
+  if (cleanUrl && cleanKey) {
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_URL, cleanUrl);
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_KEY, cleanKey);
+    creds = { url: cleanUrl, key: cleanKey, isConfigured: true, source: 'custom' };
+    supabase = createClient(cleanUrl, cleanKey);
+    isSupabaseConfigured = true;
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.CUSTOM_URL);
+    localStorage.removeItem(STORAGE_KEYS.CUSTOM_KEY);
+    creds = getSupabaseCredentials();
+    supabase = createClient(
+      creds.isConfigured ? creds.url : 'https://dummy-instance.supabase.co',
+      creds.isConfigured ? creds.key : 'dummy-anon-key'
+    );
+    isSupabaseConfigured = creds.isConfigured;
+  }
+}
 
 // Initialize localStorage fallback cache if not present
 function initializeLocalFallback() {
@@ -62,7 +108,9 @@ initializeLocalFallback();
  * Fetch a business by its unique URL slug (e.g. /b/sandbox-cafe)
  */
 export async function getBusinessBySlug(slug: string): Promise<Business | null> {
-  if (isSupabaseConfigured) {
+  const currentCreds = getSupabaseCredentials();
+
+  if (currentCreds.isConfigured) {
     try {
       const { data, error } = await supabase
         .from('businesses')
@@ -70,10 +118,11 @@ export async function getBusinessBySlug(slug: string): Promise<Business | null> 
         .eq('slug', slug)
         .maybeSingle();
 
-      if (error) {
-        console.warn('Supabase getBusinessBySlug error, falling back:', error.message);
-      } else if (data) {
+      if (!error && data) {
         return data as Business;
+      }
+      if (error) {
+        console.warn('Supabase getBusinessBySlug query:', error.message);
       }
     } catch (err) {
       console.warn('Network error reaching Supabase, using fallback data:', err);
@@ -88,7 +137,7 @@ export async function getBusinessBySlug(slug: string): Promise<Business | null> 
 
   if (match) return match;
 
-  // Auto-generate fallback for unknown slugs if requested
+  // Auto-generate fallback for novel slug
   const dynamicFallback: Business = {
     id: `b-${slug}-${Date.now()}`,
     slug: slug,
@@ -109,7 +158,9 @@ export async function getBusinessBySlug(slug: string): Promise<Business | null> 
  * Fetch categories belonging to a specific business_id
  */
 export async function getCategoriesByBusinessId(businessId: string): Promise<Category[]> {
-  if (isSupabaseConfigured) {
+  const currentCreds = getSupabaseCredentials();
+
+  if (currentCreds.isConfigured) {
     try {
       const { data, error } = await supabase
         .from('categories')
@@ -117,9 +168,7 @@ export async function getCategoriesByBusinessId(businessId: string): Promise<Cat
         .eq('business_id', businessId)
         .order('display_order', { ascending: true });
 
-      if (error) {
-        console.warn('Supabase getCategoriesByBusinessId error:', error.message);
-      } else if (data && data.length > 0) {
+      if (!error && data && data.length > 0) {
         return data as Category[];
       }
     } catch (err) {
@@ -135,12 +184,11 @@ export async function getCategoriesByBusinessId(businessId: string): Promise<Cat
 
   if (filtered.length > 0) return filtered;
 
-  // Return standard categories if novel business ID
   return [
-    { id: `c-all-${businessId}`, business_id: businessId, name: 'All Products', display_order: 0 },
-    { id: `c-sig-${businessId}`, business_id: businessId, name: 'Signature Brews', display_order: 1 },
+    { id: `c-all-${businessId}`, business_id: businessId, name: 'All Items', display_order: 0 },
+    { id: `c-sig-${businessId}`, business_id: businessId, name: 'Signature Whipped', display_order: 1 },
     { id: `c-cold-${businessId}`, business_id: businessId, name: 'Iced & Cold Brew', display_order: 2 },
-    { id: `c-art-${businessId}`, business_id: businessId, name: 'Artisan Latte', display_order: 3 },
+    { id: `c-art-${businessId}`, business_id: businessId, name: 'Espresso & Latte', display_order: 3 },
   ];
 }
 
@@ -148,16 +196,16 @@ export async function getCategoriesByBusinessId(businessId: string): Promise<Cat
  * Fetch menu items belonging to a specific business_id
  */
 export async function getMenuItemsByBusinessId(businessId: string): Promise<MenuItem[]> {
-  if (isSupabaseConfigured) {
+  const currentCreds = getSupabaseCredentials();
+
+  if (currentCreds.isConfigured) {
     try {
       const { data, error } = await supabase
         .from('menu_items')
         .select('*')
         .eq('business_id', businessId);
 
-      if (error) {
-        console.warn('Supabase getMenuItemsByBusinessId error:', error.message);
-      } else if (data && data.length > 0) {
+      if (!error && data && data.length > 0) {
         return data as MenuItem[];
       }
     } catch (err) {
@@ -173,18 +221,11 @@ export async function getMenuItemsByBusinessId(businessId: string): Promise<Menu
 
   if (filtered.length > 0) return filtered;
 
-  // If new business, provide the signature reference coffee items
-  return SEED_MENU_ITEMS.slice(0, 5).map((item, idx) => ({
-    ...item,
-    id: `m-custom-${businessId}-${idx}`,
-    business_id: businessId
-  }));
+  return SEED_MENU_ITEMS;
 }
 
 /**
  * Submit a table reservation via Supabase INSERT
- * Critical Functional Requirement:
- * Public INSERT into the reservations table utilizing the current business_id
  */
 export async function insertReservation(reservation: {
   business_id: string;
@@ -202,7 +243,9 @@ export async function insertReservation(reservation: {
     created_at: new Date().toISOString()
   };
 
-  if (isSupabaseConfigured) {
+  const currentCreds = getSupabaseCredentials();
+
+  if (currentCreds.isConfigured) {
     try {
       const { data, error } = await supabase
         .from('reservations')
@@ -217,6 +260,8 @@ export async function insertReservation(reservation: {
         return { success: true, data: saved, error: error.message, source: 'fallback' };
       }
 
+      // Also save locally as mirror
+      saveReservationLocally(data as Reservation);
       return { success: true, data: data as Reservation, source: 'supabase' };
     } catch (err: any) {
       console.error('Supabase reservation insert exception:', err);
@@ -236,7 +281,7 @@ function saveReservationLocally(res: Reservation): Reservation {
   const reservations: Reservation[] = raw ? JSON.parse(raw) : INITIAL_RESERVATIONS;
   const newRes: Reservation = {
     ...res,
-    id: `res-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
+    id: res.id || `res-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
   };
   reservations.unshift(newRes);
   localStorage.setItem(STORAGE_KEYS.RESERVATIONS, JSON.stringify(reservations));
@@ -247,7 +292,9 @@ function saveReservationLocally(res: Reservation): Reservation {
  * Get reservations for developer drawer / confirmation lookup
  */
 export async function getReservationsByBusinessId(businessId: string): Promise<Reservation[]> {
-  if (isSupabaseConfigured) {
+  const currentCreds = getSupabaseCredentials();
+
+  if (currentCreds.isConfigured) {
     try {
       const { data, error } = await supabase
         .from('reservations')
@@ -255,7 +302,7 @@ export async function getReservationsByBusinessId(businessId: string): Promise<R
         .eq('business_id', businessId)
         .order('created_at', { ascending: false });
 
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
         return data as Reservation[];
       }
     } catch (e) {
@@ -267,4 +314,105 @@ export async function getReservationsByBusinessId(businessId: string): Promise<R
   const raw = localStorage.getItem(STORAGE_KEYS.RESERVATIONS);
   const list: Reservation[] = raw ? JSON.parse(raw) : INITIAL_RESERVATIONS;
   return list.filter((r) => r.business_id === businessId);
+}
+
+/**
+ * Diagnostic tool: Check remote table row counts
+ */
+export async function checkRemoteTableStatus(): Promise<{
+  connected: boolean;
+  error?: string;
+  counts: {
+    businesses: number;
+    categories: number;
+    menu_items: number;
+    reservations: number;
+  };
+}> {
+  const currentCreds = getSupabaseCredentials();
+  if (!currentCreds.isConfigured) {
+    return {
+      connected: false,
+      error: 'Supabase URL and Anon key are not provided yet.',
+      counts: { businesses: 0, categories: 0, menu_items: 0, reservations: 0 }
+    };
+  }
+
+  try {
+    const [bizRes, catRes, menuRes, resRes] = await Promise.all([
+      supabase.from('businesses').select('*', { count: 'exact', head: true }),
+      supabase.from('categories').select('*', { count: 'exact', head: true }),
+      supabase.from('menu_items').select('*', { count: 'exact', head: true }),
+      supabase.from('reservations').select('*', { count: 'exact', head: true }),
+    ]);
+
+    if (bizRes.error) {
+      return {
+        connected: false,
+        error: bizRes.error.message,
+        counts: { businesses: 0, categories: 0, menu_items: 0, reservations: 0 }
+      };
+    }
+
+    return {
+      connected: true,
+      counts: {
+        businesses: bizRes.count || 0,
+        categories: catRes.count || 0,
+        menu_items: menuRes.count || 0,
+        reservations: resRes.count || 0,
+      }
+    };
+  } catch (err: any) {
+    return {
+      connected: false,
+      error: err.message || 'Failed to connect to Supabase.',
+      counts: { businesses: 0, categories: 0, menu_items: 0, reservations: 0 }
+    };
+  }
+}
+
+/**
+ * One-click browser helper to seed SandBox Cafe directly into remote Supabase
+ */
+export async function seedLiveSupabaseDirectly(): Promise<{ success: boolean; message: string }> {
+  const currentCreds = getSupabaseCredentials();
+  if (!currentCreds.isConfigured) {
+    return { success: false, message: 'Please enter your Supabase URL & Anon Key first.' };
+  }
+
+  try {
+    // 1. Insert or update SandBox Cafe business
+    const biz = SEED_BUSINESSES[0];
+    const { error: bizErr } = await supabase
+      .from('businesses')
+      .upsert([biz as any], { onConflict: 'slug' });
+
+    if (bizErr) throw new Error(`Businesses insert error: ${bizErr.message}`);
+
+    // 2. Insert Categories
+    const { error: catErr } = await supabase
+      .from('categories')
+      .upsert(SEED_CATEGORIES as any[], { onConflict: 'id' });
+
+    if (catErr) throw new Error(`Categories insert error: ${catErr.message}`);
+
+    // 3. Insert Menu Items
+    const { error: menuErr } = await supabase
+      .from('menu_items')
+      .upsert(SEED_MENU_ITEMS as any[], { onConflict: 'id' });
+
+    if (menuErr) throw new Error(`Menu Items insert error: ${menuErr.message}`);
+
+    // 4. Insert Initial Reservation
+    const { error: resErr } = await supabase
+      .from('reservations')
+      .upsert(INITIAL_RESERVATIONS as any[], { onConflict: 'id' });
+
+    if (resErr) throw new Error(`Reservation insert error: ${resErr.message}`);
+
+    return { success: true, message: 'SandBox Cafe data seeded successfully into your Supabase database!' };
+  } catch (err: any) {
+    return { success: false, message: err.message || 'Seeding failed. Please check RLS policies or run the SQL script in SQL Editor.' };
+  }
 }

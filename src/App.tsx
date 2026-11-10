@@ -234,6 +234,7 @@ export default function App() {
         onClose={() => setIsSchemaOpen(false)}
         business={business}
         onNavigateSlug={navigateToSlug}
+        onRefreshData={() => loadTenantData(currentSlug)}
       />
 
       {/* Floating Quick Action Badge */}
