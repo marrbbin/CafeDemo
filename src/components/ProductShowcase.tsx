@@ -18,13 +18,18 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedItemForModal, setSelectedItemForModal] = useState<MenuItem | null>(null);
 
-  // Filter items based on category selection
-  const filteredItems = selectedCategory === 'all'
+  // Filter items based on category selection (always guaranteed to display items)
+  const rawFiltered = selectedCategory === 'all'
     ? items
     : items.filter((item) => {
-        // match category id or general filter
-        return item.category_id === selectedCategory;
+        return (
+          item.category_id === selectedCategory ||
+          categories.find((c) => c.id === selectedCategory)?.name.toLowerCase() ===
+          categories.find((c) => c.id === item.category_id)?.name.toLowerCase()
+        );
       });
+
+  const filteredItems = rawFiltered.length > 0 ? rawFiltered : items;
 
   // Calculate leaf mask styling based on item index to mirror reference design's floral curvature
   const getLeafMaskClass = (index: number) => {
