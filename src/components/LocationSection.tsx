@@ -16,21 +16,20 @@ export const LocationSection: React.FC<LocationSectionProps> = ({ business, onBo
   const [travelMode, setTravelMode] = useState<TravelMode>('driving');
   const [activeMapView, setActiveMapView] = useState<'embed' | 'route-guide'>('embed');
 
-  // Exact coordinates for Portside, Cadiz City (Plus code: X82C+7X8)
-  const lat = Number(business.latitude) || 10.950625;
-  const lng = Number(business.longitude) || 123.322375;
-  const addressText = "Portside, X82C+7X8, Port, Cadiz City, 6121 Negros Occidental";
+  // Exact coordinates extracted from your provided iframe (Portside, Cadiz City)
+  const lat = Number(business.latitude) || 10.950651;
+  const lng = Number(business.longitude) || 123.308252;
+  const addressText = "Portside, Cadiz City, 6121 Negros Occidental";
 
-  // Google Maps Deep Link configured to automatically calculate route and highlight the road
-  // Using destination coords, travelmode, and dir_action=navigate for turn-by-turn road highlighting
+  // Google Maps Deep Link configured to automatically calculate route
   const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=${travelMode}&dir_action=navigate`;
 
   // Alternate direct location link
   const directMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressText)}`;
 
-  // Public Google Maps Embed URL centered on Portside, Cadiz City with exact pin
-  const embedMapUrl = `https://maps.google.com/maps?q=${lat},${lng}+(${encodeURIComponent('SandBox Cafe - Portside Cadiz City')})&t=&z=16&ie=UTF8&iwloc=B&output=embed`;
-
+  // The precise Google Maps Embed URL you provided
+  const embedMapUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15668.673484668969!2d123.30825215135403!3d10.950651006332773!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33a8c52395f5dce9%3A0x984a69c202d8f1d8!2sPortside!5e0!3m2!1sen!2sph!4v1794323022159!5m2!1sen!2sph";
+  
   return (
     <section id="contact" className="py-16 md:py-24 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
